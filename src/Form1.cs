@@ -106,7 +106,7 @@ namespace ModbusKUKA
 
             IModbusSlaveNetwork network = factory.CreateSlaveNetwork(slaveTcpListener);
 
-            IModbusSlave slave = factory.CreateSlave(0xFF);
+            IModbusSlave slave = factory.CreateSlave(byte.Parse(set.address));
 
             network.AddSlave(slave);
             network.ListenAsync();
