@@ -40,6 +40,6 @@ c3b with plc was slow that because PLC program need wait cycle to visit next var
 
 Modify config.csv as you need. Currently we only support type INT32 and FLOAT32, PLC only use DINT type, Float will use 100.0 multiplier. The input(KUKA -> PLC) support array like `INPUT[],INT[10],0,R`, but output(PLC -> KUKA) not support it. The read process time will large than output, So you can use array to reduce read process time.
 
-You should defined variables in $config.dat.
+You should defined variables in $config.dat. If you use array, make sure every element in array was set init value.
 
 Sometimes maybe you want visit string or struct, you can also use c3bridge at same time.
