@@ -3,6 +3,8 @@ A Modbus TCP Slave for KRC4 Controller
 
 ![](img.png)
 
+![](gif.gif)
+
 ## WHY
 
 KUKA not provide modbus TCP protocol, kukavarproxy only support 1 var request, it very slow. C3bridge support multi variables, But it not easy trans to different PLC's.
