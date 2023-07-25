@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Text.RegularExpressions;
 
 namespace ModbusKUKA
 {
@@ -20,6 +21,7 @@ namespace ModbusKUKA
             public string address;
             public string RW;
             public string value;
+            public string state;
         }
 
         public struct settings
@@ -114,35 +116,140 @@ namespace ModbusKUKA
                 for (int i = 0; i < var.Count; i++)
                 {
                     vars actvar = var[i];
+                    int arraysize = 1;
+                    Match match = Regex.Match(actvar.type, @"\[(\d+)\]");
+                    if (match.Success) arraysize = int.Parse(match.Groups[1].Value);
+                    ushort[] buffer = new ushort[arraysize*2];
+                    int buf;
+
                     if (actvar.RW == "R")
                     {
-                        ushort[] test = { 0x00, 0x00 };
-                        int test2 = Int32.Parse(actvar.value);
-                        if (set.endian == "0") { 
-                            test[0] = ((ushort)test2);
-                            test[1] = (ushort)(test2 >> 16);
+                        if (match.Success)
+                        {
+                            //it is an array
+                            string[] ele = actvar.value.Split(' ');
+                            if (ele.Length > 1)
+                            {
+                                int length = ele.Length;
+                                if (arraysize < ele.Length) length = arraysize;
+                                for (int j = 0; j < length; j++)
+                                {
+                                    if (ele[j].Length > 0)
+                                    {
+                                        if (actvar.type.Contains("REAL"))
+                                        {
+                                            buf = (int)(float.Parse(ele[j]) * 100);
+                                        }
+                                        else if (actvar.type.Contains("INT"))
+                                        {
+                                            buf = Int32.Parse(ele[j]);
+                                        }
+                                        else
+                                        {
+                                            buf = 0;
+                                        }
+
+                                        if (set.endian == "0")
+                                        {
+                                            buffer[j * 2] = ((ushort)buf);
+                                            buffer[j * 2 + 1] = (ushort)(buf >> 16);
+                                        }
+                                        else
+                                        {
+                                            buffer[j * 2] = (ushort)(buf >> 16);
+                                            buffer[j * 2 + 1] = ((ushort)buf);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        buffer[j * 2] = 0;
+                                        buffer[j * 2 + 1] = 0;
+                                    }
+                                }
+                            }
+
                         }
                         else
                         {
-                            test[0] = (ushort)(test2 >> 16);
-                            test[1] = ((ushort)test2);
+                            if (actvar.type == "REAL")
+                            {
+                                buf = (int)(float.Parse(actvar.value) * 100);
+                            }
+                            else if (actvar.type == "INT")
+                            {
+                                buf = Int32.Parse(actvar.value);
+                            }
+                            else
+                            {
+                                buf = 0;
+                            }
+
+                            if (set.endian == "0")
+                            {
+                                buffer[0] = ((ushort)buf);
+                                buffer[1] = (ushort)(buf >> 16);
+                            }
+                            else
+                            {
+                                buffer[0] = (ushort)(buf >> 16);
+                                buffer[1] = ((ushort)buf);
+                            }
                         }
-                        slave.DataStore.HoldingRegisters.WritePoints(UInt16.Parse(actvar.address), test);
+                        slave.DataStore.HoldingRegisters.WritePoints(UInt16.Parse(actvar.address), buffer);
                     }
                     if (actvar.RW == "W")
                     {
+                        /*
+                        if (match.Success)
+                        {
+                            //it is an array
+                            buffer = slave.DataStore.HoldingRegisters.ReadPoints(UInt16.Parse(actvar.address), (ushort)(arraysize * 2));
+                            string tempstr = "";
+                            actvar.state = "BUSY";
+                            actvar.value = "";
+                            for (int j = 0; j < arraysize; j++)
+                            {
+                                if (set.endian == "0")
+                                {
+                                    tempstr = ((int)buffer[j] | (int)buffer[j + 1] << 16).ToString();
+                                }
+                                else
+                                {
+                                    tempstr = ((int)buffer[j+1] | (int)buffer[j] << 16).ToString();
+                                }
+                                actvar.value = actvar.value + tempstr;
+                                if (j < arraysize - 1) actvar.value = actvar.value + " ";
+                            }
+                            actvar.state = "OK";
+                            var[i] = actvar;
+                        }*/
+                        
                         ushort size = 2;
                         if (actvar.type == "INT") size = 2;
                         ushort[] test = slave.DataStore.HoldingRegisters.ReadPoints(UInt16.Parse(actvar.address), size);
                         if (set.endian == "0")
                         {
-                            actvar.value = ((int)test[0] | (int)test[1] << 16).ToString();
+                            if (actvar.type == "INT") {
+                                actvar.value = ((int)test[0] | (int)test[1] << 16).ToString();
+                            }
+                            else if (actvar.type == "REAL")
+                            {
+                                actvar.value = ((float)((int)test[0] | (int)test[1] << 16) / 100.0).ToString();
+                            }
+
                         }
                         else
                         {
-                            actvar.value = ((int)test[1] | (int)test[0] << 16).ToString();
+                            if (actvar.type == "INT") { 
+                                actvar.value = ((int)test[1] | (int)test[0] << 16).ToString();
+                            }
+                            else if (actvar.type == "REAL")
+                            {
+                                actvar.value = ((float)((int)test[1] | (int)test[0] << 16) / 100.0).ToString();
+                            }
                         }
                         var[i] = actvar;
+                                
                     }
                 }
                 Thread.Sleep(10);
@@ -212,10 +319,6 @@ namespace ModbusKUKA
                         }
                         if (actvar.RW == "W")
                         {
-                            if (actvar.address == "78")
-                            {
-                                string aa = actvar.value;
-                            }
                             itfSyncvar.SetVar(actvar.name, actvar.value);
                         }
                     }
@@ -231,7 +334,7 @@ namespace ModbusKUKA
         }
 
         /// <summary>
-        ///     SharedMemory Communication with KUKA CROSS3.
+        ///     Textbox update
         /// </summary>
         public void StartTextUpdate()
         {
