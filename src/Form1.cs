@@ -117,7 +117,7 @@ namespace ModbusKUKA
                     if (actvar.RW == "R")
                     {
                         ushort[] test = { 0x00, 0x00 };
-                        uint test2 = UInt32.Parse(actvar.value);
+                        int test2 = Int32.Parse(actvar.value);
                         if (set.endian == "0") { 
                             test[0] = ((ushort)test2);
                             test[1] = (ushort)(test2 >> 16);
@@ -136,11 +136,11 @@ namespace ModbusKUKA
                         ushort[] test = slave.DataStore.HoldingRegisters.ReadPoints(UInt16.Parse(actvar.address), size);
                         if (set.endian == "0")
                         {
-                            actvar.value = ((uint)test[0] | (uint)test[1] << 16).ToString();
+                            actvar.value = ((int)test[0] | (int)test[1] << 16).ToString();
                         }
                         else
                         {
-                            actvar.value = ((uint)test[1] | (uint)test[0] << 16).ToString();
+                            actvar.value = ((int)test[1] | (int)test[0] << 16).ToString();
                         }
                         var[i] = actvar;
                     }
@@ -212,6 +212,10 @@ namespace ModbusKUKA
                         }
                         if (actvar.RW == "W")
                         {
+                            if (actvar.address == "78")
+                            {
+                                string aa = actvar.value;
+                            }
                             itfSyncvar.SetVar(actvar.name, actvar.value);
                         }
                     }
