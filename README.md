@@ -11,16 +11,18 @@ Cross3 lib communication with cross3 service use shared memory. Then cross3 tran
 
 A variable visit will cost about 2ms in cross3. You can monitor it in  Cross3LogViewer.
 
+In this test we get 25 int32 variable result:
+
 |NAME|TIME|NOTE|
 |----|----|----|
-|kukavarproxy|~60ms|
-|c3bridge|~60ms|
-|modbusKUKA|~60ms|
-|kukavarproxy+TCP|~70ms|
-|c3bridge+TCP|~70ms|single and multi was same|
-|modbuskuka|~60ms|
+|kukavarproxy|~90ms|
+|c3bridge|~90ms|
+|modbusKUKA|~100ms|
+|kukavarproxy+TCP|~100ms|
+|c3bridge+TCP|~100ms|single and multi was same|
+|modbuskuka|~100ms|
 |kukavarproxy+PLC|~400ms|
 |c3bridge+PLC|~400ms|
-|modbuskuka|~60ms|
+|modbuskuka|~100ms|
 
 

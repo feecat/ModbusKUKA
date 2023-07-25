@@ -32,6 +32,8 @@ namespace ModbusKUKA
 
         private settings set = new settings();
         private List<vars> var = new List<vars>();
+        DateTime dt1, dt2;
+        TimeSpan ts;
 
         public Form1()
         {
@@ -70,6 +72,11 @@ namespace ModbusKUKA
                 Thread thread2 = new Thread(new ThreadStart(StartCrossCommunication));
                 thread2.IsBackground = true;
                 thread2.Start();
+
+                //Text thread
+                Thread thread3 = new Thread(new ThreadStart(StartTextUpdate));
+                thread3.IsBackground = true;
+                thread3.Start();
             }
             catch (Exception e)
             {
@@ -111,8 +118,15 @@ namespace ModbusKUKA
                     {
                         ushort[] test = { 0x00, 0x00 };
                         uint test2 = UInt32.Parse(actvar.value);
-                        test[0] = ((ushort)test2);
-                        test[1] = (ushort)(test2 >> 16);
+                        if (set.endian == "0") { 
+                            test[0] = ((ushort)test2);
+                            test[1] = (ushort)(test2 >> 16);
+                        }
+                        else
+                        {
+                            test[0] = (ushort)(test2 >> 16);
+                            test[1] = ((ushort)test2);
+                        }
                         slave.DataStore.HoldingRegisters.WritePoints(UInt16.Parse(actvar.address), test);
                     }
                     if (actvar.RW == "W")
@@ -120,11 +134,57 @@ namespace ModbusKUKA
                         ushort size = 2;
                         if (actvar.type == "INT") size = 2;
                         ushort[] test = slave.DataStore.HoldingRegisters.ReadPoints(UInt16.Parse(actvar.address), size);
-                        actvar.value = ((uint)test[0] | (uint)test[1] << 16).ToString();
+                        if (set.endian == "0")
+                        {
+                            actvar.value = ((uint)test[0] | (uint)test[1] << 16).ToString();
+                        }
+                        else
+                        {
+                            actvar.value = ((uint)test[1] | (uint)test[0] << 16).ToString();
+                        }
                         var[i] = actvar;
                     }
                 }
                 Thread.Sleep(10);
+            }
+        }
+
+        private void MainWindow_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                this.WindowState = FormWindowState.Minimized;
+                this.notifyIcon1.Visible = true;
+                this.Hide();
+                return;
+            }
+        }
+
+        private void mainNotifyIcon_MouseDoubleClick(object sender, EventArgs e)
+        {
+            if (this.Visible)
+            {
+                this.WindowState = FormWindowState.Minimized;
+                this.notifyIcon1.Visible = true;
+                this.Hide();
+            }
+            else
+            {
+                this.Visible = true;
+                this.WindowState = FormWindowState.Normal;
+                this.Activate();
+            }
+        }
+
+        private void eXITToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("QUIT?", "TIP", MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
+            {
+                this.notifyIcon1.Visible = false;
+                this.Close();
+                this.Dispose();
+                System.Environment.Exit(System.Environment.ExitCode);
             }
         }
 
@@ -137,15 +197,17 @@ namespace ModbusKUKA
             {
                 var objServiceFactory = new KrcServiceFactoryClass();
                 var itfSyncvar = (ICKSyncVar)objServiceFactory.GetService("WBC_KrcLib.SyncVar", "ModbusKUKA");
+
                 while (true)
                 {
+                    dt1 = DateTime.Now;
                     for (int i = 0; i < var.Count; i++)
                     {
                         vars actvar = var[i];
                         if (actvar.RW == "R")
                         {
                             actvar.value = itfSyncvar.ShowVar(actvar.name);
-                            if (actvar.value.Length < 1) actvar.value = "0";
+                            if (actvar.value.Length < 1) actvar.value = set.fall_keep;
                             var[i] = actvar;
                         }
                         if (actvar.RW == "W")
@@ -154,6 +216,8 @@ namespace ModbusKUKA
                         }
                     }
                     Thread.Sleep(10);
+                    dt2 = DateTime.Now;
+                    ts = dt2.Subtract(dt1);
                 }
             }
             catch (Exception e)
@@ -161,5 +225,51 @@ namespace ModbusKUKA
                 MessageBox.Show(e.Message);
             }
         }
+
+        /// <summary>
+        ///     SharedMemory Communication with KUKA CROSS3.
+        /// </summary>
+        public void StartTextUpdate()
+        {
+            try
+            {
+                string temp = "";
+                Thread.Sleep(2000);
+                while (true)
+                {
+                    textBox1.Invoke((Action)delegate{
+                        textBox1.Clear();
+                        
+                        textBox1.AppendText("\r\n");
+                        textBox1.AppendText("\r\n");
+                        textBox1.AppendText(" Modbus KUKA Service Started \r\n");
+                        temp = " IP: " + set.robot_ip + "\r\n";
+                        textBox1.AppendText(temp);
+                        temp = " Unit-ID: " + set.address + "\r\n";
+                        textBox1.AppendText(temp);
+                        temp = " fall_keep: " + set.fall_keep + "\r\n";
+                        textBox1.AppendText(temp);
+                        temp = " endian: " + set.endian + "\r\n";
+                        textBox1.AppendText(temp);
+                        temp = " data number: " + var.Count.ToString() + "\r\n";
+                        textBox1.AppendText(temp);
+
+                        textBox1.AppendText(" ------------------\r\n");
+
+                        temp = " Cross3ProcessTime: " + ((int)ts.TotalMilliseconds).ToString() + "MS \r\n";
+                        textBox1.AppendText(temp);
+
+
+
+                    });
+                    Thread.Sleep(200);
+                }
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show(e.Message);
+            }
+        }
+
     }
 }
