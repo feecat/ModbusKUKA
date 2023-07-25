@@ -23,16 +23,18 @@ In this test we get 25 int32 variable result:
 |c3bridge|~90ms|
 |modbusKUKA|~100ms|
 |kukavarproxy + TCP|~100ms|
-|c3bridge + TCP|~100ms|single and multi was same|
+|c3bridge + TCP|~100ms|
 |----|----|----|
 |kukavarproxy + PLC|~500ms|
 |c3bridge + PLC|~500ms|
 |modbuskuka + PLC|~100ms|
 |modbuskuka + array read| ~50ms|
 
+c3b with plc was slow that because PLC program need wait cycle to visit next variables.
+
 ## Use
 
-Modify config.csv as you need. Currently we only support type INT and FLOAT, PLC only use DINT type, Float will use 100.0 multiplier. The input(KUKA -> PLC) support array like `INPUT[],INT[10],0,R`, but output(PLC -> KUKA) not support it. The read process time will large than output, So you can use array to reduce read process time.
+Modify config.csv as you need. Currently we only support type INT32 and FLOAT32, PLC only use DINT type, Float will use 100.0 multiplier. The input(KUKA -> PLC) support array like `INPUT[],INT[10],0,R`, but output(PLC -> KUKA) not support it. The read process time will large than output, So you can use array to reduce read process time.
 
 You should defined variables in $config.dat.
 
