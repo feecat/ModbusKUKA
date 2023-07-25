@@ -3,6 +3,8 @@ A Modbus TCP Slave for KRC4 Controller
 
 ![](img.png)
 
+GIF(click to see original):
+
 ![](gif.gif)
 
 ## WHY
